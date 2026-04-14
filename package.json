@@ -1,0 +1,19 @@
+{
+  "name": "cc520-prj3",
+  "version": "1.0.0",
+  "description": "capstone project",
+  "license": "ISC",
+  "author": "Jackson Taylor",
+  "type": "module",
+  "main": "script.js",
+  "scripts": {
+    "main": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1029.0",
+    "@aws-sdk/util-dynamodb": "^3.996.2",
+    "chart.js": "^4.5.1",
+    "express": "^5.2.1"
+  }
+}

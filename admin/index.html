@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Trap Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav id="navbar">
+        <div id="navbar-content">
+            <h1 id="navbar-title">Graph Trap Admin</h1>
+            <div id="navbar-buttons">
+                <a id="home-link" href="index.html">Play</a>
+                <a id="config-link" href="config/index.html">Config Creator</a>
+            </div>
+        </div>
+    </nav>
+
+    <main id="admin-main">
+        <section id="admin-login" class="admin-card">
+            <h2>Admin Sign In</h2>
+            <p>Enter the admin password to access database controls.</p>
+            <input id="admin-password" type="password" placeholder="Admin password">
+            <button id="admin-login-btn">Sign In</button>
+            <p id="login-error" class="admin-error"></p>
+        </section>
+
+        <section id="admin-panel" class="admin-panel" hidden>
+            <div class="admin-card">
+                <h2>AWS Connection</h2>
+                <p>Provide region and AWS credentials to connect to DynamoDB.</p>
+                <label>Region
+                    <input id="aws-region" type="text" value="us-east-1">
+                </label>
+                <label>Access key
+                    <input id="aws-access-key" type="text" autocomplete="off">
+                </label>
+                <label>Secret key
+                    <input id="aws-secret-key" type="password" autocomplete="off">
+                </label>
+                <button id="aws-connect-btn">Connect</button>
+                <p id="aws-status" class="admin-status"></p>
+            </div>
+
+            <div class="admin-card">
+                <div class="admin-section-header">
+                    <h2>Configs</h2>
+                    <button id="refresh-configs">Refresh Configs</button>
+                </div>
+                <table id="configs-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div id="config-add" class="admin-card admin-subcard">
+                    <h3>Add Config</h3>
+                    <label>Config file
+                        <input id="config-file-input" type="file" accept=".json">
+                    </label>
+                    <label>Start time
+                        <input id="config-start" type="datetime-local">
+                    </label>
+                    <label>End time
+                        <input id="config-end" type="datetime-local">
+                    </label>
+                    <button id="config-add-btn">Upload and add config</button>
+                    <p id="config-add-status" class="admin-status"></p>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <div class="admin-section-header">
+                    <h2>Viewer Data</h2>
+                    <button id="refresh-scores">Load All Entries</button>
+                </div>
+                <div id="score-summary" class="admin-data-block">
+                    <p>No viewer data loaded yet.</p>
+                </div>
+                <div id="config-viewer-details" class="admin-data-block"></div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>

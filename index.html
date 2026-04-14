@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Trap Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="schoolbell-regular">
+    <div id="topbar">
+        <div id="topbar-content">
+            <div id="left-topbar-buttons">
+                <div id="load-config">
+                    <input type="file" id="config-file" accept=".json">
+                    <span id="load-config-label">Load Config</span>
+                </div>
+                <a id="config-link" href="config/index.html">Config Creator</a>
+            </div>
+            <h1 id="topbar-title">Graph Trap Game</h1>
+            <div id="topbar-buttons">
+                <a id="admin-link" href="admin/index.html">Admin</a>
+            </div>
+        </div>
+    </div>
+    <div id="game-container">
+        <div id="graph-display"></div>
+        <div id="controls">
+            <div id="move-scrollbar"></div>
+            <button id="submit-score-btn" disabled hidden>Submit Score</button>
+        </div>
+    </div>
+    <div id="win-overlay" style="display: none;">
+        <p id="win-message"></p>
+        <div id="score-chart"></div>
+        <button id="close-win">Close</button>
+    </div>
+    <div id="lose-overlay" style="display: none;">
+        <p id="lose-message"></p>
+        <button id="close-lose">Close</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>

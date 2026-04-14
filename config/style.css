@@ -1,0 +1,76 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 20px;
+}
+
+#editor-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#graph-display {
+    width: 500px;
+    height: 500px;
+    border: 1px solid black;
+    position: relative;
+    background-color: #f0f0f0;
+    cursor: crosshair;
+}
+
+.node {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: lightblue;
+    border: 1px solid blue;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: white;
+}
+
+.node.selected {
+    border-color: red;
+    border-width: 3px;
+}
+
+.node.edge {
+    border-color: black;
+    border-width: 2px;
+}
+
+.node.agent {
+    background-color: green;
+}
+
+.node.target {
+    background-color: red;
+}
+
+#controls {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#instructions {
+    font-size: 14px;
+    margin: 10px 0;
+    max-width: 500px;
+}

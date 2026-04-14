@@ -1,0 +1,173 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Full deployment of the game app — EC2 instance running the Express server,
+  two DynamoDB tables, and security group. Uses the Academy LabRole for
+  DynamoDB access via the existing LabInstanceProfile.
+
+# ─── Parameters ───────────────────────────────────────────────────────────────
+
+Parameters:
+
+  GitRepoUrl:
+    Type: String
+    Description: HTTPS URL of your GitHub repository (e.g. https://github.com/you/your-repo.git)
+
+  GitBranch:
+    Type: String
+    Default: main
+    Description: Branch to deploy
+
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro, t2.small, t2.medium]
+    Description: EC2 instance type (t2.micro is free tier eligible)
+
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Latest Amazon Linux 2023 AMI — resolved automatically per region
+
+# ─── Resources ────────────────────────────────────────────────────────────────
+
+Resources:
+
+  # ── DynamoDB ──────────────────────────────────────────────────────────────────
+
+  ConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Configs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: config_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: config_id
+          KeyType: HASH
+
+  ScoreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Scores
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: config_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: config_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: config_id-index
+          KeySchema:
+            - AttributeName: config_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # ── Security Group ────────────────────────────────────────────────────────────
+
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP on port 3000 and SSH
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  # ── EC2 Instance ──────────────────────────────────────────────────────────────
+
+  AppInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - ConfigTable
+      - ScoreTable
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      IamInstanceProfile: LabInstanceProfile
+      SecurityGroups:
+        - !Ref AppSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -e
+
+          # ── System setup ──────────────────────────────────────────────────────
+          yum update -y
+          yum install -y git
+
+          # Install Node.js 20 via NodeSource
+          curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+          yum install -y nodejs
+
+          # ── Clone and install app ─────────────────────────────────────────────
+          cd /home/ec2-user
+          git clone --branch ${GitBranch} ${GitRepoUrl} app
+          cd app
+          npm install
+
+          # ── Environment ───────────────────────────────────────────────────────
+          # The IAM role attached to this instance grants DynamoDB access
+          # automatically — no credentials needed in the environment.
+          cat > /home/ec2-user/app/.env << 'EOF'
+          AWS_REGION=${AWS::Region}
+          EOF
+          chown ec2-user:ec2-user /home/ec2-user/app/.env
+
+          # ── systemd service — starts on boot, restarts on crash ───────────────
+          cat > /etc/systemd/system/gameapp.service << 'EOF'
+          [Unit]
+          Description=Game App Express Server
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=ec2-user
+          WorkingDirectory=/home/ec2-user/app
+          ExecStart=/usr/bin/node server.js
+          Restart=on-failure
+          RestartSec=5
+          EnvironmentFile=/home/ec2-user/app/.env
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable gameapp
+          systemctl start gameapp
+
+# ─── Outputs ──────────────────────────────────────────────────────────────────
+
+Outputs:
+
+  AppUrl:
+    Description: URL of the deployed application — open this in your browser
+    Value: !Sub "http://${AppInstance.PublicDnsName}:3000"
+
+  AdminUrl:
+    Description: URL of the admin panel
+    Value: !Sub "http://${AppInstance.PublicDnsName}:3000/admin/index.html"
+
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref AppInstance
+
+  ConfigTableArn:
+    Description: ARN of the Configs DynamoDB table
+    Value: !GetAtt ConfigTable.Arn
+
+  ScoreTableArn:
+    Description: ARN of the Scores DynamoDB table
+    Value: !GetAtt ScoreTable.Arn

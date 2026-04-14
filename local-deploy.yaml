@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DynamoDB tables for ConfigDatabase and ScoreDatabase
+
+Resources:
+
+  # ─── Config Table ────────────────────────────────────────────────────────────
+
+  ConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Configs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: config_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: config_id
+          KeyType: HASH
+
+  # ─── Score Table ─────────────────────────────────────────────────────────────
+
+  ScoreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Scores
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: config_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: config_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: config_id-index
+          KeySchema:
+            - AttributeName: config_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+Outputs:
+  ConfigTableName:
+    Value: !Ref ConfigTable
+    Description: Name of the Configs DynamoDB table
+
+  ConfigTableArn:
+    Value: !GetAtt ConfigTable.Arn
+    Description: ARN of the Configs DynamoDB table
+
+  ScoreTableName:
+    Value: !Ref ScoreTable
+    Description: Name of the Scores DynamoDB table
+
+  ScoreTableArn:
+    Value: !GetAtt ScoreTable.Arn
+    Description: ARN of the Scores DynamoDB table
