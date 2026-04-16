@@ -32,6 +32,51 @@ Parameters:
 
 Resources:
 
+  # ── VPC ───────────────────────────────────────────────────────────────────────
+
+  AppVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  AppSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AppVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+
+  AppInternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AppVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref AppVPC
+      InternetGatewayId: !Ref AppInternetGateway
+
+  AppRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AppVPC
+
+  AppRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AppVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref AppRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref AppInternetGateway
+
+  AppSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AppSubnet
+      RouteTableId: !Ref AppRouteTable
+
   # ── DynamoDB ──────────────────────────────────────────────────────────────────
 
   ConfigTable:
@@ -95,6 +140,7 @@ Resources:
     Properties:
       InstanceType: !Ref InstanceType
       ImageId: !Ref AmiId
+      SubnetId: !Ref AppSubnet
       IamInstanceProfile: LabInstanceProfile
       SecurityGroups:
         - !Ref AppSecurityGroup

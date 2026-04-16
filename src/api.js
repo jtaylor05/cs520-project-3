@@ -1,5 +1,29 @@
 const BASE = "/api";
 
+// ─── Utilities ─────────────────────────────────────────────────────────────────
+
+export async function getUuid() {
+    const response = await fetch(`${BASE}/uuid`);
+    if (!response.ok) {
+        throw new Error('Failed to get uuid from backend');
+    }
+    const data = await response.json();
+    return data.uuid;
+}
+
+export async function getSha256(value) {
+    const response = await fetch(`${BASE}/hash`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value }),
+    });
+    if (!response.ok) {
+        throw new Error('Failed to get sha256 from backend');
+    }
+    const data = await response.json();
+    return data.hash;
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export async function fetchNextConfig() {

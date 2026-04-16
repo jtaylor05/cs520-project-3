@@ -1,4 +1,5 @@
 import express from "express";
+import crypto from "crypto";
 import { DynamoDBConfigDatabase, DynamoDBScoreDatabase } from "./src/database.js";
 
 const app = express();
@@ -10,6 +11,32 @@ app.use(express.static("."));
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     next();
+});
+
+// ─── General ──────────────────────────────────────────────────────────────────
+
+app.get("/api/uuid", async (req, res) => {
+    try {
+        const uuid = crypto.randomUUID();
+        res.json({ uuid });
+    } catch (err) {
+        console.error('UUID generation failed', err);
+        res.status(500).json({ error: 'UUID generation failed' });
+    }
+});
+
+app.post("/api/hash", async (req, res) => {
+    try {
+        const { value } = req.body;
+        if (typeof value !== 'string') {
+            return res.status(400).json({ error: 'Request body must include a string value.' });
+        }
+        const hash = crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+        res.json({ hash });
+    } catch (err) {
+        console.error('Hash generation failed', err);
+        res.status(500).json({ error: 'Hash generation failed' });
+    }
 });
 
 // ─── Config ───────────────────────────────────────────────────────────────────

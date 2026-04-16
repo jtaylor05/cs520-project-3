@@ -43,11 +43,18 @@ class Graph {
 
 const NODE_SIZE = 64;
 
-function generateRandomId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
+async function generateRandomId() {
+    try {
+        const response = await fetch('/api/uuid');
+        if (!response.ok) {
+            throw new Error('Could not fetch uuid from backend');
+        }
+        const data = await response.json();
+        return data.uuid;
+    } catch (error) {
+        console.error(error);
+        return `cfg-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
     }
-    return 'cfg-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
 }
 
 class Config {
@@ -78,7 +85,7 @@ class Config {
         this.target = null;
     }
 
-    save() {
+    async save() {
         if (this.graph.nodes.length === 0) {
             alert('Graph is empty! Please add some nodes before saving.');
             return false;
@@ -97,7 +104,7 @@ class Config {
         }
 
         if (!this.id) {
-            this.id = generateRandomId();
+            this.id = await generateRandomId();
         }
 
         const config = {
@@ -274,8 +281,8 @@ toggleTargetBtn.addEventListener('click', () => {
     }
 });
 
-saveBtn.addEventListener('click', () => {
-    config.save();
+saveBtn.addEventListener('click', async () => {
+        await config.save();
 });
 
 document.addEventListener('mousemove', (e) => {

@@ -1,23 +1,23 @@
 import { Game, AggregateMove } from './src/game.js';
 import { generateConfig, DefaultGameConfig } from './src/config.js';
 import { DisplayRenderer, ScoreGraphRenderer } from './src/render.js';
-import { fetchNextConfig, fetchScore, submitScore } from './src/api.js';
+import { fetchNextConfig, fetchScore, submitScore, getUuid } from './src/api.js';
 import { StateService } from './src/stateService.js';
 
 const MARGINS = 50;
 
 // ─── User identity ────────────────────────────────────────────────────────────
 
-function getUserId() {
+async function getUserId() {
     let userId = localStorage.getItem('user_id');
     if (!userId) {
-        userId = crypto.randomUUID();
+        userId = await getUuid();
         localStorage.setItem('user_id', userId);
     }
     return userId;
 }
 
-const USER_ID = getUserId();
+let USER_ID = null;
 
 // ─── Game setup ───────────────────────────────────────────────────────────────
 
@@ -101,6 +101,7 @@ if (adminConfigJson) {
 
 async function initializeDatabase() {
     try {
+        USER_ID = await getUserId();
         // Admin preview — load the injected config directly
         if (adminConfig) {
             game.setConfig(generateConfig(adminConfig));
@@ -120,9 +121,10 @@ async function initializeDatabase() {
         } else {
             // Same config — check if the player already submitted
             const prevScore = await fetchScore(USER_ID, game.config.id);
-            if (prevScore.length !== 0) {
+            const moves = prevScore.score;
+            if (moves.length !== 0) {
                 submittedScore = true;
-                game.moves = AggregateMove.loadState(prevScore, game);
+                game.moves = moves.map(m => AggregateMove.loadState(m, game));
                 game.setMoveIndex(game.moves.length - 1);
             }
         }

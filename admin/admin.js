@@ -1,4 +1,4 @@
-import { addConfig, deleteScore, fetchAllConfigs, fetchScoresByConfig, removeConfig } from '../src/api.js';
+import { addConfig, deleteScore, fetchAllConfigs, fetchScoresByConfig, removeConfig, getUuid, getSha256 } from '../src/api.js';
 import storage from '../src/storage.js';
 
 const ADMIN_PASSWORD_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
@@ -6,10 +6,7 @@ let backendConnected = false;
 let activeScoreConfigId = null;
 
 async function sha256Hex(value) {
-    const data = new TextEncoder().encode(value);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    return getSha256(value);
 }
 
 const elements = {
@@ -261,9 +258,7 @@ async function addConfigFromFile() {
         const payloadId = payload?.id;
         const hasValidId = typeof payloadId === 'string' ? payloadId.trim().length > 0 : Number.isFinite(payloadId);
         if (!hasValidId) {
-            payload.id = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-                ? crypto.randomUUID()
-                : `cfg-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+            payload.id = await getUuid();
         }
         const config_id = await addConfig(payload, new Date(start), new Date(end));
         elements.configAddStatus.textContent = `Saved config ${config_id}.`;
