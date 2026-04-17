@@ -176,7 +176,7 @@ async function showConfigChart(config_id) {
 
         elements.configViewerDetails.innerHTML = `
             <h3>Score chart for config ${config_id}</h3>
-            <canvas id="config-score-chart" width="600" height="320"></canvas>
+            <div width="600" height="320"><canvas id="config-score-chart"></canvas></div>
         `;
 
         const canvas = document.getElementById('config-score-chart');
