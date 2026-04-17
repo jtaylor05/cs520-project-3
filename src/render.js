@@ -1,4 +1,4 @@
-import { handleNodeClick, handleScrollBarClick } from './controller.js'
+import { handleAngryCat, handleNodeClick, handleScrollBarClick } from './controller.js'
 import { fetchScoreChartByConfig, fetchScoresByConfig } from './api.js'
 
 export const NODE_TAG          = 'node'
@@ -61,6 +61,7 @@ class NodeGraphRenderer extends Renderer {
             if (this.game.agents.some(a => a.position === node)) div.classList.add(AGENT_TAG);
             if (this.game.target.position === node) div.classList.add(TARGET_TAG);
             div.addEventListener('click', () => handleNodeClick(this.game, node));
+            div.addEventListener('click', () => handleAngryCat(div));
             graphDisplay.appendChild(div);
         });
     }
@@ -91,8 +92,8 @@ class SVGRenderer extends Renderer {
                     line.setAttribute('y1', pos.y + this.padding);
                     line.setAttribute('x2', neighborPos.x + this.padding);
                     line.setAttribute('y2', neighborPos.y + this.padding);
-                    line.setAttribute('stroke', '#77777755');
-                    line.setAttribute('stroke-width', '10');
+                    line.setAttribute('stroke', '#777777');
+                    line.setAttribute('stroke-width', '3');
                     svg.appendChild(line);
                 }
             });

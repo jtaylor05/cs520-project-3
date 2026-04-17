@@ -88,6 +88,9 @@ app.get("/api/scores/chart/:config_id", async (req, res) => {
     if (maxLength - minLength < 10) {
         maxLength = minLength + 10;
     }
+    else if (maxLength - minLength > 30) {
+        maxLength = minLength + 30;
+    }
     const counts = {};
 
     for (let length = minLength; length <= maxLength; length++) {

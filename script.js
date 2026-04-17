@@ -4,7 +4,7 @@ import { DisplayRenderer, ScoreGraphRenderer } from './src/render.js';
 import { fetchNextConfig, fetchScore, submitScore, getUuid } from './src/api.js';
 import { StateService } from './src/stateService.js';
 
-const MARGINS = 50;
+const MARGINS = 100;
 
 // ─── User identity ────────────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ let USER_ID = null;
 // ─── Game setup ───────────────────────────────────────────────────────────────
 
 const gameEvents = new EventTarget();
-const game = new Game(gameEvents, new DefaultGameConfig(6, 6));
+const game = new Game(gameEvents, new DefaultGameConfig(3, 3));
 const stateService = new StateService(game);
 const renderService = new DisplayRenderer(game, MARGINS);
 const scoreRenderer = new ScoreGraphRenderer(game);

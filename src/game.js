@@ -69,7 +69,7 @@ export class AggregateMove extends Move {
 }
 
 export class Game {
-    constructor(eventbus, config = new DefaultGameConfig(6, 6)) {
+    constructor(eventbus, config = new DefaultGameConfig(3, 3)) {
         this.setConfig(config);
         this.eventbus = eventbus
     }
@@ -108,7 +108,7 @@ export class Game {
         else if (this.agents.map(a => a.position.neighbors).flat().filter(n => !(this.agents.some(a => a.position === n) || this.target.position === n)).length === 0) {
             this.status = "Player loses!";
         }
-        else if (this.target.getMove(this) === null) {
+        else if (this.moves.length > 0 && this.target.getMove(this) === null) {
             this.status = 'Player wins!';
         }
         else this.status = 'In Progress';

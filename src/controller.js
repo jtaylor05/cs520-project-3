@@ -19,6 +19,16 @@ export function handleNodeClick(game, node) {
     }
 }
 
+export function handleAngryCat(node_pressed) {
+    if (node_pressed.classList.contains('target')) {
+        node_pressed.classList.add('angry');
+        console.log(node_pressed)
+        setTimeout(() => {
+            if (node_pressed.classList.contains('angry')) node_pressed.classList.remove('angry')
+        }, 700);
+    }
+}
+
 export function handleScrollBarClick(game, index) {
     game.setMoveIndex(index);
 }

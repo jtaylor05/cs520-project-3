@@ -18,7 +18,7 @@ export class StateService {
         }
         catch (e) {
             console.error("Failed to load state:", e);
-            this.game.setConfig(new DefaultGameConfig(6, 6));
+            this.game.setConfig(new DefaultGameConfig(3, 3));
         }
     }
 }
