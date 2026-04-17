@@ -177,7 +177,7 @@ body {
     /*background-color: lightblue;
     border: 1px solid blue;*/
     background-image: url("textures/node_outline.gif");
-    background-size: auto;
+    background-size: contain;
     image-rendering: pixelated;
     cursor: pointer;
     display: flex;
@@ -301,4 +301,54 @@ body {
 #lose-overlay button {
     padding: 10px 20px;
     font-size: 16px;
+}
+
+#tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.65);
+    z-index: 1500;
+    padding: 20px;
+}
+
+.tutorial-card {
+    max-width: 420px;
+    width: 100%;
+    background: #f8f5ef;
+    border: 2px solid #333;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    padding: 24px;
+    text-align: left;
+}
+
+.tutorial-card h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 28px;
+}
+
+.tutorial-card p {
+    margin: 10px 0;
+    line-height: 1.5;
+    color: #333;
+}
+
+.tutorial-card button {
+    margin-top: 18px;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 999px;
+    background-color: #4caf50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.tutorial-card button:hover {
+    background-color: #45a047;
 }

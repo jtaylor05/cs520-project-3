@@ -47,6 +47,8 @@ const elements = {
     loseMessage:     document.getElementById('lose-message'),
     closeWinBtn:     document.getElementById('close-win'),
     closeLoseBtn:    document.getElementById('close-lose'),
+    tutorialOverlay: document.getElementById('tutorial-overlay'),
+    tutorialDismissBtn: document.getElementById('tutorial-dismiss-btn'),
     scoreChart:      document.getElementById('score-chart'),
 };
 
@@ -64,6 +66,21 @@ function updateSubmitButton() {
 function hideOverlays() {
     elements.winOverlay.style.display = 'none';
     elements.loseOverlay.style.display = 'none';
+}
+
+function showTutorialOverlay() {
+    elements.tutorialOverlay.style.display = 'flex';
+}
+
+function hideTutorialOverlay() {
+    elements.tutorialOverlay.style.display = 'none';
+    localStorage.setItem('tutorial_shown', '1');
+}
+
+function maybeShowTutorial() {
+    if (!localStorage.getItem('tutorial_shown')) {
+        showTutorialOverlay();
+    }
 }
 
 function showWinOverlay() {
@@ -192,9 +209,11 @@ elements.configFileInput.addEventListener('change', (e) => {
 
 elements.closeWinBtn.addEventListener('click', hideOverlays);
 elements.closeLoseBtn.addEventListener('click', hideOverlays);
+elements.tutorialDismissBtn.addEventListener('click', hideTutorialOverlay);
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 
 loadState();
 renderService.render(document);
+maybeShowTutorial();
 initializeDatabase();
