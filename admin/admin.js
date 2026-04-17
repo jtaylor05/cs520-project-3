@@ -1,4 +1,4 @@
-import { addConfig, deleteScore, fetchAllConfigs, fetchScoresByConfig, removeConfig, getUuid, getSha256 } from '../src/api.js';
+import { addConfig, deleteScore, fetchAllConfigs, fetchScoreChartByConfig, fetchScoresByConfig, removeConfig, getUuid, getSha256 } from '../src/api.js';
 import storage from '../src/storage.js';
 
 const ADMIN_PASSWORD_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
@@ -104,12 +104,14 @@ function renderConfigRow(item) {
         <td class="admin-actions">
             <button class="open-btn">Open</button>
             <button class="scores-btn">View Scores</button>
+            <button class="chart-btn">Show Chart</button>
             <button class="delete-btn">Delete</button>
         </td>
     `;
 
     tr.querySelector('.open-btn').addEventListener('click', () => openConfigInGame(item));
     tr.querySelector('.scores-btn').addEventListener('click', () => showConfigScores(item.config_id));
+    tr.querySelector('.chart-btn').addEventListener('click', () => showConfigChart(item.config_id));
     tr.querySelector('.delete-btn').addEventListener('click', async () => {
         if (!confirm(`Delete config ${item.config_id}?`)) return;
         try {
@@ -160,6 +162,60 @@ async function showConfigScores(config_id) {
     } catch (error) {
         console.error(error);
         setAwsStatus('Failed to load config-specific scores.', true);
+    }
+}
+
+async function showConfigChart(config_id) {
+    try {
+        requireConnection();
+        const chartData = await fetchScoreChartByConfig(config_id);
+        if (!chartData || !Array.isArray(chartData.labels)) {
+            setAwsStatus('Chart data is unavailable for this config.', true);
+            return;
+        }
+
+        elements.configViewerDetails.innerHTML = `
+            <h3>Score chart for config ${config_id}</h3>
+            <canvas id="config-score-chart" width="600" height="320"></canvas>
+        `;
+
+        const canvas = document.getElementById('config-score-chart');
+        if (!canvas) {
+            throw new Error('Chart canvas not found');
+        }
+
+        if (window.adminChart) {
+            window.adminChart.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        window.adminChart = new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Score distribution',
+                    },
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Moves' },
+                    },
+                    y: {
+                        title: { display: true, text: 'Count' },
+                        beginAtZero: true,
+                    },
+                },
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        setAwsStatus('Failed to load score chart.', true);
     }
 }
 

@@ -1,0 +1,335 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Full deployment of the game app — Auto Scaling EC2 instances behind an
+  Application Load Balancer, two DynamoDB tables, and security groups.
+  Uses the Academy LabRole for DynamoDB access via the existing LabInstanceProfile.
+
+# ─── Parameters ───────────────────────────────────────────────────────────────
+
+Parameters:
+
+  GitRepoUrl:
+    Type: String
+    Description: HTTPS URL of your GitHub repository (e.g. https://github.com/you/your-repo.git)
+
+  GitBranch:
+    Type: String
+    Default: main
+    Description: Branch to deploy
+
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro, t2.small, t2.medium]
+    Description: EC2 instance type (t2.micro is free tier eligible)
+
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Latest Amazon Linux 2023 AMI — resolved automatically per region
+
+  MinInstances:
+    Type: Number
+    Default: 1
+    Description: Minimum number of EC2 instances in the Auto Scaling Group
+
+  MaxInstances:
+    Type: Number
+    Default: 3
+    Description: Maximum number of EC2 instances in the Auto Scaling Group
+
+  DesiredInstances:
+    Type: Number
+    Default: 2
+    Description: Desired number of EC2 instances in the Auto Scaling Group
+
+# ─── Resources ────────────────────────────────────────────────────────────────
+
+Resources:
+
+  # ── VPC ───────────────────────────────────────────────────────────────────────
+
+  AppVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  # Two subnets in different AZs — required by the ALB
+  AppSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AppVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+
+  AppSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AppVPC
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [1, !GetAZs '']
+
+  AppInternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AppVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref AppVPC
+      InternetGatewayId: !Ref AppInternetGateway
+
+  AppRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AppVPC
+
+  AppRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AppVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref AppRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref AppInternetGateway
+
+  AppSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AppSubnetA
+      RouteTableId: !Ref AppRouteTable
+
+  AppSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AppSubnetB
+      RouteTableId: !Ref AppRouteTable
+
+  # ── DynamoDB ──────────────────────────────────────────────────────────────────
+
+  ConfigTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Configs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: config_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: config_id
+          KeyType: HASH
+
+  ScoreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Scores
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: config_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+        - AttributeName: config_id
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: config_id-index
+          KeySchema:
+            - AttributeName: config_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # ── Security Groups ───────────────────────────────────────────────────────────
+
+  # ALB security group: accepts public HTTP on port 80
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP on port 80 from the internet
+      VpcId: !Ref AppVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+  # Instance security group: only accepts traffic from the ALB on port 3000
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow port 3000 from ALB only
+      VpcId: !Ref AppVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+
+  # ── Application Load Balancer ─────────────────────────────────────────────────
+
+  AppALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: AppVPCGatewayAttachment
+    Properties:
+      Name: GameAppALB
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Subnets:
+        - !Ref AppSubnetA
+        - !Ref AppSubnetB
+
+  AppTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: GameAppTargetGroup
+      VpcId: !Ref AppVPC
+      Protocol: HTTP
+      Port: 3000
+      TargetType: instance
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+
+  AppALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref AppALB
+      Protocol: HTTP
+      Port: 80
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref AppTargetGroup
+
+  # ── Launch Template ───────────────────────────────────────────────────────────
+
+  AppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: GameAppLaunchTemplate
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        ImageId: !Ref AmiId
+        IamInstanceProfile:
+          Name: LabInstanceProfile
+        SecurityGroupIds:
+          - !Ref AppSecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -e
+
+            # ── System setup ──────────────────────────────────────────────────────
+            yum update -y
+            yum install -y git
+
+            # Install Node.js 20 via NodeSource
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+            yum install -y nodejs
+
+            # ── Clone and install app ─────────────────────────────────────────────
+            cd /home/ec2-user
+            git clone --branch ${GitBranch} ${GitRepoUrl} app
+            cd app
+            npm install
+
+            # ── Environment ───────────────────────────────────────────────────────
+            cat > /home/ec2-user/app/.env << 'EOF'
+            AWS_REGION=${AWS::Region}
+            EOF
+            sed -i 's/^[[:space:]]*//' /home/ec2-user/app/.env
+            chown ec2-user:ec2-user /home/ec2-user/app/.env
+
+            # ── systemd service ───────────────────────────────────────────────────
+            cat > /etc/systemd/system/gameapp.service << 'EOF'
+            [Unit]
+            Description=Game App Express Server
+            After=network.target
+
+            [Service]
+            Type=simple
+            User=ec2-user
+            WorkingDirectory=/home/ec2-user/app
+            ExecStart=/usr/bin/node server.js
+            Restart=on-failure
+            RestartSec=5
+            EnvironmentFile=/home/ec2-user/app/.env
+
+            [Install]
+            WantedBy=multi-user.target
+            EOF
+
+            sed -i 's/^[[:space:]]*//' /etc/systemd/system/gameapp.service
+
+            systemctl daemon-reload
+            systemctl enable gameapp
+            systemctl start gameapp
+
+  # ── Auto Scaling Group ────────────────────────────────────────────────────────
+
+  AppAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn:
+      - ConfigTable
+      - ScoreTable
+      - AppALBListener
+    Properties:
+      AutoScalingGroupName: GameAppASG
+      LaunchTemplate:
+        LaunchTemplateId: !Ref AppLaunchTemplate
+        Version: !GetAtt AppLaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinInstances
+      MaxSize: !Ref MaxInstances
+      DesiredCapacity: !Ref DesiredInstances
+      VPCZoneIdentifier:
+        - !Ref AppSubnetA
+        - !Ref AppSubnetB
+      TargetGroupARNs:
+        - !Ref AppTargetGroup
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 120
+
+  # ── Auto Scaling Policy (CPU-based) ──────────────────────────────────────────
+
+  AppScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AppAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 60.0
+
+# ─── Outputs ──────────────────────────────────────────────────────────────────
+
+Outputs:
+
+  AppUrl:
+    Description: URL of the deployed application via the load balancer
+    Value: !Sub "http://${AppALB.DNSName}"
+
+  AdminUrl:
+    Description: URL of the admin panel via the load balancer
+    Value: !Sub "http://${AppALB.DNSName}/admin/index.html"
+
+  ALBDNSName:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt AppALB.DNSName
+
+  ConfigTableArn:
+    Description: ARN of the Configs DynamoDB table
+    Value: !GetAtt ConfigTable.Arn
+
+  ScoreTableArn:
+    Description: ARN of the Scores DynamoDB table
+    Value: !GetAtt ScoreTable.Arn
