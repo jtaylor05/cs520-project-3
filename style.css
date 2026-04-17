@@ -7,7 +7,7 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 0 20px;
-    background-image: url("textures/wood_floors_med.png");
+    background-image: url("textures/tiling_floor.png");
     background-repeat: repeat;
     image-rendering: pixelated;
 }
@@ -108,7 +108,7 @@ body {
 #graph-display {
     width: 500px;
     height: 500px;
-    /*border: 1px solid black;*/
+    scale: 1.2;
     position: relative;
     /*background-color: #f0f0f0;*/
 }
@@ -171,29 +171,44 @@ body {
 
 .node {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     /*background-color: lightblue;
     border: 1px solid blue;*/
-    background-image: url("textures/carpet_small.png");
-    background-size: cover;
+    background-image: url("textures/node_outline.gif");
+    background-size: auto;
     image-rendering: pixelated;
     cursor: pointer;
     display: flex;
 }
 
 .node.agent {
-    background-image: url("textures/green_carpet.png");
+    background-image: url("textures/person.gif"), url("textures/node_outline.gif");
 }
 
 .node.target {
-    background-image: url("textures/cat.png");
+    background-image: url("textures/cat.gif"), url("textures/node_outline.gif");
 }
 
 .node.edge {
-    border-color: black;
-    border-width: 2px;
+    background-image: url("textures/escape_node.gif");
+}
+
+.node.edge.agent {
+    background-image: url("textures/person.gif"), url("textures/escape_node.gif");
+}
+
+.node.edge.target {
+    background-image: url("textures/cat.gif"), url("textures/escape_node.gif");
+}
+
+.node.target.angry {
+    background-image: url(textures/scared_cat.gif), url("textures/node_outline.gif");
+}
+
+.node.edge.target.angry {
+    background-image: url(textures/scared_cat.gif), url("textures/escape_node.gif");
 }
 
 #controls {
@@ -270,15 +285,6 @@ body {
     z-index: 1000;
     box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
-/* 
-body.win-gradient::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background: radial-gradient(circle at center, transparent 40%, rgba(140, 255, 140, 0.20) 100%);
-    z-index: 999;
-} */
 
 #lose-overlay {
     background-color: #fff4f4;
