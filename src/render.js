@@ -115,14 +115,20 @@ class ScrollbarRenderer extends Renderer {
         if (this.game.currentMoveIndex === -1) item.classList.add('current');
         item.addEventListener('click', () => handleScrollBarClick(this.game, -1))
         moveScrollbar.appendChild(item);
+        let current;
         this.game.moves.forEach((move, index) => {
+            console.log(move, index);
             const item = document.createElement('div');
             item.className = SCROLL_BUTTON_TAG;
-            if (index === this.game.currentMoveIndex) item.classList.add('current');
+            if (index === this.game.currentMoveIndex) {
+                item.classList.add('current');
+                current = item;
+            }
             item.textContent = 'Move ' + (index + 1);
             item.addEventListener('click', () => handleScrollBarClick(this.game, index))
             moveScrollbar.appendChild(item);
         });
+        current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
 

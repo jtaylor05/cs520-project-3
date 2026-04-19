@@ -54,9 +54,20 @@ const elements = {
 
 // ─── Submit button ────────────────────────────────────────────────────────────
 
+async function hasSubmittedScore() {
+    try {
+        const prevScore = await fetchScore(USER_ID, game.config.id);
+        const moves = prevScore.score;
+        return moves && moves.length !== 0;
+    } catch (error) {
+        console.error('Failed to fetch previous score:', error);
+        return true;
+    }
+}
+
 // Visible only when the game is won and the player hasn't submitted yet
-function updateSubmitButton() {
-    const canSubmit = gameIsWon() && !submittedScore;
+async function updateSubmitButton() {
+    const canSubmit = gameIsWon() && !(await hasSubmittedScore());
     elements.submitScoreBtn.hidden = !canSubmit;
     elements.submitScoreBtn.disabled = !canSubmit;
 }
@@ -135,14 +146,16 @@ async function initializeDatabase() {
             game.setConfig(generateConfig(nextConfig));
             renderService.render(document);
             saveState();
-        } else {
+        } else if (!(game.moves.length > 0)) {
             // Same config — check if the player already submitted
             const prevScore = await fetchScore(USER_ID, game.config.id);
             const moves = prevScore.score;
-            if (moves.length !== 0) {
+            if (moves && moves.length !== 0) {
                 submittedScore = true;
                 game.moves = moves.map(m => AggregateMove.loadState(m, game));
                 game.setMoveIndex(game.moves.length - 1);
+                renderService.render(document);
+                saveState();
             }
         }
 
@@ -176,7 +189,7 @@ gameEvents.addEventListener('lose', () => {
 });
 
 elements.submitScoreBtn.addEventListener('click', async () => {
-    if (!gameIsWon() || !game.config?.id || submittedScore) return;
+    if (!gameIsWon() || !game.config?.id || (await hasSubmittedScore())) return;
     try {
         const savedState = game.saveState();
         await submitScore(USER_ID, game.config.id, savedState.moves);
