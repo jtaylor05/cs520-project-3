@@ -115,9 +115,8 @@ class ScrollbarRenderer extends Renderer {
         if (this.game.currentMoveIndex === -1) item.classList.add('current');
         item.addEventListener('click', () => handleScrollBarClick(this.game, -1))
         moveScrollbar.appendChild(item);
-        let current;
+        let current = item;
         this.game.moves.forEach((move, index) => {
-            console.log(move, index);
             const item = document.createElement('div');
             item.className = SCROLL_BUTTON_TAG;
             if (index === this.game.currentMoveIndex) {

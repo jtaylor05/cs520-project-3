@@ -152,7 +152,6 @@ export class Game {
     }
 
     setMoveIndex(index) {
-        console.log(this.moves);
         while (this.currentMoveIndex > index) {
             this.undo();
         }

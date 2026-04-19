@@ -146,7 +146,7 @@ async function initializeDatabase() {
             game.setConfig(generateConfig(nextConfig));
             renderService.render(document);
             saveState();
-        } else if (!(game.moves.length > 0)) {
+        } else if (game.moves.length == 0) {
             // Same config — check if the player already submitted
             const prevScore = await fetchScore(USER_ID, game.config.id);
             const moves = prevScore.score;
