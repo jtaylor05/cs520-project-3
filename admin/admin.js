@@ -4,6 +4,7 @@ import storage from '../src/storage.js';
 const ADMIN_PASSWORD_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
 let backendConnected = false;
 let activeScoreConfigId = null;
+let authed = false;
 
 async function sha256Hex(value) {
     return getSha256(value);
@@ -15,9 +16,6 @@ const elements = {
     passwordInput: document.getElementById('admin-password'),
     loginBtn: document.getElementById('admin-login-btn'),
     loginError: document.getElementById('login-error'),
-    awsRegion: document.getElementById('aws-region'),
-    awsAccessKey: document.getElementById('aws-access-key'),
-    awsSecretKey: document.getElementById('aws-secret-key'),
     awsConnectBtn: document.getElementById('aws-connect-btn'),
     awsStatus: document.getElementById('aws-status'),
     refreshConfigs: document.getElementById('refresh-configs'),
@@ -30,7 +28,18 @@ const elements = {
     refreshScores: document.getElementById('refresh-scores'),
     scoreSummary: document.getElementById('score-summary'),
     configViewerDetails: document.getElementById('config-viewer-details'),
+    openAddConfigBtn: document.getElementById('open-add-config-btn'),
+    addConfigModal: document.getElementById('add-config-modal'),
+    closeModalBtn: document.getElementById('close-modal-btn'),
 };
+const observer = new MutationObserver(() => {
+    if (!authed && elements.adminPanel.hidden === false) {
+        elements.adminPanel.hidden = !authed;
+        elements.loginSection.hidden = authed;
+    }
+});
+if (elements.adminPanel) observer.observe(elements.adminPanel, { attributes: true, attributeFilter: ['hidden'] });
+if (elements.loginSection) observer.observe(elements.loginSection, { attributes: true, attributeFilter: ['hidden'] });
 
 function setLoginError(message) {
     elements.loginError.textContent = message;
@@ -39,6 +48,11 @@ function setLoginError(message) {
 function setAwsStatus(message, isError = false) {
     elements.awsStatus.textContent = message;
     elements.awsStatus.style.color = isError ? '#b32d2e' : '#2d7a32';
+}
+
+function setConfigStatus(message, isError = false) {
+    elements.configAddStatus.textContent = message;
+    elements.configAddStatus.style.color = isError ? '#b32d2e' : '#2d7a32';
 }
 
 function formatTimestamp(value) {
@@ -170,23 +184,25 @@ async function showConfigChart(config_id) {
         requireConnection();
         const chartData = await fetchScoreChartByConfig(config_id);
         if (!chartData || !Array.isArray(chartData.labels)) {
-            setAwsStatus('Chart data is unavailable for this config.', true);
             return;
         }
 
-        elements.configViewerDetails.innerHTML = `
-            <h3>Score chart for config ${config_id}</h3>
-            <div width="600" height="320"><canvas id="config-score-chart"></canvas></div>
-        `;
+        // Wipe previous content
+        elements.configViewerDetails.innerHTML = '';
 
-        const canvas = document.getElementById('config-score-chart');
-        if (!canvas) {
-            throw new Error('Chart canvas not found');
-        }
+        const heading = document.createElement('h3');
+        heading.textContent = `Score distribution — config: ${config_id}`;
 
-        if (window.adminChart) {
-            window.adminChart.destroy();
-        }
+        const container = document.createElement('div');
+        container.className = 'chart-container';
+        const canvas = document.createElement('canvas');
+        canvas.id = 'config-score-chart';
+        container.appendChild(canvas);
+
+        elements.configViewerDetails.appendChild(heading);
+        elements.configViewerDetails.appendChild(container);
+
+        if (window.adminChart) window.adminChart.destroy();
 
         const ctx = canvas.getContext('2d');
         window.adminChart = new Chart(ctx, {
@@ -194,28 +210,34 @@ async function showConfigChart(config_id) {
             data: chartData,
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
                 plugins: {
                     legend: { display: false },
-                    title: {
-                        display: true,
-                        text: 'Score distribution',
-                    },
+                    title: { display: false },
                 },
                 scales: {
                     x: {
-                        title: { display: true, text: 'Moves' },
+                        title: { display: true, text: 'Moves', color: '#a08060' },
+                        ticks: { color: '#8a7060' },
+                        grid: { color: 'rgba(200,168,122,0.08)' },
                     },
                     y: {
-                        title: { display: true, text: 'Count' },
+                        title: { display: true, text: 'Count', color: '#a08060' },
                         beginAtZero: true,
+                        ticks: {
+                            color: '#8a7060',
+                            // Force integer ticks — no floats on a count axis
+                            stepSize: 1,
+                            callback: (val) => Number.isInteger(val) ? val : null,
+                        },
+                        grid: { color: 'rgba(200,168,122,0.08)' },
                     },
                 },
             },
         });
     } catch (error) {
         console.error(error);
-        setAwsStatus('Failed to load score chart.', true);
     }
 }
 
@@ -226,7 +248,7 @@ function renderScoreDetails(config_id, scores) {
                 `<tr data-user-id="${score.user_id}" data-config-id="${score.config_id}">
                     <td>${score.user_id}</td>
                     <td>${score.config_id}</td>
-                    <td>${score.score}</td>
+                    <td>${score.score.length}</td>
                     <td><button class="delete-score-btn">Delete</button></td>
                 </tr>`
         )
@@ -298,14 +320,14 @@ async function addConfigFromFile() {
         requireConnection();
         const file = elements.configFileInput.files[0];
         if (!file) {
-            elements.configAddStatus.textContent = 'Choose a JSON config file first.';
+            setConfigStatus('Choose a JSON config file first.', true);
             return;
         }
 
         const start = elements.configStart.value;
         const end = elements.configEnd.value;
         if (!start || !end) {
-            elements.configAddStatus.textContent = 'Provide both a start and end date.';
+            setConfigStatus('Provide both a start and end date.', true);
             return;
         }
 
@@ -317,11 +339,15 @@ async function addConfigFromFile() {
             payload.id = await getUuid();
         }
         const config_id = await addConfig(payload, new Date(start), new Date(end));
-        elements.configAddStatus.textContent = `Saved config ${config_id}.`;
+        setConfigStatus(`Saved config ${config_id}.`, false);
+        elements.configFileInput.value = '';
+        elements.configStart.value = '';
+        elements.configEnd.value = '';
+        elements.addConfigModal.hidden = true;
         await refreshConfigs();
     } catch (error) {
         console.error(error);
-        elements.configAddStatus.textContent = 'Failed to add config. Check file format and backend connection.';
+        setConfigStatus('Failed to add config. Check file format and backend connection.', true);
     }
 }
 
@@ -331,11 +357,13 @@ function setAdminAuthVisible() {
 }
 
 function setAdminAuthSuccess() {
+    authed = true;
+    console.log("authed")
     elements.adminPanel.hidden = false;
     elements.loginSection.hidden = true;
-    setAwsStatus('Backend API ready. Click Connect to verify.', false);
+    //setAwsStatus('Backend API ready. Click Connect to verify.', false);
 }
-console.log(elements.loginBtn)
+
 elements.loginBtn.addEventListener('click', async () => {
     const value = elements.passwordInput.value;
     const hashedValue = await sha256Hex(value);
@@ -344,10 +372,6 @@ elements.loginBtn.addEventListener('click', async () => {
     } else {
         setLoginError('Invalid password.');
     }
-});
-
-elements.awsConnectBtn.addEventListener('click', async () => {
-    await connectAws();
 });
 
 elements.refreshConfigs.addEventListener('click', async () => {
@@ -362,4 +386,30 @@ elements.configAddBtn.addEventListener('click', async () => {
     await addConfigFromFile();
 });
 
+// ─── Modal handlers ───────────────────────────────────────────────
+
+elements.openAddConfigBtn?.addEventListener('click', () => {
+    elements.addConfigModal.hidden = false;
+});
+
+elements.closeModalBtn?.addEventListener('click', () => {
+    elements.addConfigModal.hidden = true;
+    setConfigStatus('');
+});
+
+elements.addConfigModal?.addEventListener('click', (e) => {
+    if (e.target === elements.addConfigModal) {
+        elements.addConfigModal.hidden = true;
+        setConfigStatus('');
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && elements.addConfigModal && !elements.addConfigModal.hidden) {
+        elements.addConfigModal.hidden = true;
+        setConfigStatus('');
+    }
+});
+
 setAdminAuthVisible();
+await connectAws();

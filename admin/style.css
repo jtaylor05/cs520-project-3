@@ -124,6 +124,41 @@ body {
     gap: 12px;
 }
 
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 8, 4, 0.72);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.modal-overlay[hidden] { display: none !important; }
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(200, 168, 122, 0.15);
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
 #configs-table,
 .admin-data-table {
     width: 100%;
