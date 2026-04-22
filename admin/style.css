@@ -2,7 +2,9 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    background: linear-gradient(180deg, #f7f2e7 0%, #d8c2a1 100%);
+    background-image: url("../textures/tiling_floor.png");
+    background-repeat: repeat;
+    image-rendering: pixelated;
     color: #2f2d2a;
 }
 

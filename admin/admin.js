@@ -289,7 +289,7 @@ async function refreshAllScores() {
                     `<tr data-user-id="${score.user_id}" data-config-id="${score.config_id}">
                         <td>${score.user_id}</td>
                         <td>${score.config_id}</td>
-                        <td>${score.score}</td>
+                        <td>${score.score.length}</td>
                         <td><button class="delete-score-btn">Delete</button></td>
                     </tr>`
             )
